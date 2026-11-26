@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>D1 | Gestión de Turno y Protocolo PPC</title>
+  <style>
+    :root {
+      --bg: #f3f5f8;
+      --surface: #ffffff;
+      --surface-alt: #f8fafc;
+      --border: #e2e8f0;
+      --primary: #b91c1c;
+      --primary-dark: #991b1b;
+      --primary-soft: #fef2f2;
+      --ink: #0f172a;
+      --muted: #475569;
+      --ok: #15803d;
+      --ok-soft: #f0fdf4;
+      --warn: #b45309;
+      --warn-soft: #fffbeb;
+      --radius: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+      padding: 20px 16px 48px;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    /* Barra superior tipo aplicación interna en producción */
+    header {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 4px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 18px 24px;
+      margin-bottom: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .d1-badge {
+      background: var(--primary);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 15px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      letter-spacing: 0.03em;
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .shift-meta {
+      font-size: 12.5px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .shift-meta strong {
+      color: var(--ink);
+    }
+
+    .nav-tabs {
+      display: inline-flex;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      padding: 8px 15px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    /* Barra de estado del turno activo */
+    .status-strip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 18px;
+      margin-bottom: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ok);
+      margin-right: 6px;
+    }
+
+    .view-section {
+      display: none;
+    }
+
+    .view-section.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 26px;
+    }
+
+    .stepper {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .step-pill {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-alt);
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .step-pill.active {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+
+    .step-pill.done {
+      border-color: #bbf7d0;
+      background: var(--ok-soft);
+      color: var(--ok);
+    }
+
+    .step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 1px solid currentColor;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step-panel {
+      display: none;
+    }
+
+    .step-panel.active {
+      display: block;
+    }
+
+    .section-title {
+      font-size: 16.5px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .section-desc {
+      font-size: 13.5px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--ink);
+    }
+
+    select {
+      width: 100%;
+      max-width: 520px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      background: #ffffff;
+      color: var(--ink);
+    }
+
+    /* Checkboxes de personal activo en turno */
+    .staff-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .staff-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-alt);
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .staff-chip input {
+      accent-color: var(--primary);
+      width: 15px;
+      height: 15px;
+    }
+
+    .pause-box {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+      max-width: 520px;
+      margin-bottom: 20px;
+    }
+
+    .timer-display {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 6px 0 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-dark);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      border-color: var(--border);
+      color: var(--ink);
+    }
+
+    .btn-secondary:hover {
+      background: var(--surface-alt);
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    .info-box {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 18px;
+      background: var(--surface-alt);
+    }
+
+    .info-box.urgent {
+      border-left: 4px solid var(--primary);
+      background: #ffffff;
+    }
+
+    .info-box.defer {
+      border-left: 4px solid #64748b;
+    }
+
+    .info-box.avoid {
+      border-left: 4px solid var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .info-box.assertive {
+      border-left: 4px solid var(--ok);
+      background: var(--ok-soft);
+    }
+
+    .box-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .urgent .box-label,
+    .avoid .box-label {
+      color: var(--primary);
+    }
+
+    .defer .box-label {
+      color: var(--muted);
+    }
+
+    .assertive .box-label {
+      color: var(--ok);
+    }
+
+    .info-box ul {
+      padding-left: 18px;
+      font-size: 13.5px;
+      color: var(--ink);
+    }
+
+    .info-box li {
+      margin-bottom: 6px;
+    }
+
+    .script-quote {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--ink);
+    }
+
+    .toast-ok {
+      margin-top: 14px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: var(--ok-soft);
+      border: 1px solid #bbf7d0;
+      color: var(--ok);
+      font-size: 13px;
+      font-weight: 600;
+      display: none;
+    }
+
+    /* Vista 2: Bitácora + Práctica + Evaluación */
+    .practice-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .sub-switch {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .sub-btn {
+      border: none;
+      background: var(--surface-alt);
+      padding: 7px 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .sub-btn.active {
+      background: var(--ink);
+      color: #ffffff;
+    }
+
+    .log-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 13px 15px;
+      margin-bottom: 10px;
+      background: var(--surface-alt);
+    }
+
+    .log-item.new-entry {
+      border-left: 4px solid var(--ok);
+      background: #ffffff;
+    }
+
+    .log-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .badge-state {
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--ok-soft);
+      color: var(--ok);
+    }
+
+    .case-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .case-pill {
+      padding: 6px 11px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--surface-alt);
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--muted);
+    }
+
+    .case-pill.active {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .scenario-context {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 13px 15px;
+      font-size: 13.5px;
+      margin-bottom: 14px;
+    }
+
+    .option-btn {
+      width: 100%;
+      text-align: left;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 11px 14px;
+      margin-bottom: 9px;
+      font-size: 13.5px;
+      color: var(--ink);
+      cursor: pointer;
+      transition: border-color 0.15s ease;
+    }
+
+    .option-btn:hover {
+      border-color: var(--primary);
+      background: var(--surface-alt);
+    }
+
+    .feedback-banner {
+      padding: 11px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface-alt);
+    }
+
+    .obs-header {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 11px 14px;
+      font-size: 12.5px;
+      color: var(--muted);
+      margin-bottom: 14px;
+      line-height: 1.6;
+    }
+
+    .obs-header strong {
+      color: var(--ink);
+    }
+
+    .check-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .check-row:last-of-type {
+      border-bottom: none;
+    }
+
+    .check-row select {
+      width: 120px;
+      padding: 6px 8px;
+      font-size: 12.5px;
+    }
+
+    .score-summary {
+      margin-top: 14px;
+      padding: 13px 14px;
+      border-radius: 8px;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .score-num {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    @media (max-width: 780px) {
+      .stepper,
+      .two-col,
+      .practice-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .nav-tabs,
+      .btn,
+      .status-strip {
+        display: none !important;
+      }
+      .card {
+        border: 1px solid #cbd5e1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand-row">
+        <div class="d1-badge">D1</div>
+        <div>
+          <h1>D1recto al Corazón — Gestión de Turno PPC</h1>
+          <div class="shift-meta">
+            Tienda: <strong>#0412 Alto Prado (Barranquilla)</strong> · Jefe en turno: <strong>Carlos Méndez</strong>
+          </div>
+        </div>
+      </div>
+      <nav class="nav-tabs" aria-label="Navegación principal">
+        <button class="tab-btn active" onclick="switchTab('copiloto', this)">Asistente de Turno</button>
+        <button class="tab-btn" onclick="switchTab('taller', this)">Bitácora y Supervisión</button>
+      </nav>
+    </header>
+
+    <div class="status-strip">
+      <div><span class="status-dot"></span><strong>Turno activo:</strong> Mañana (06:00 – 14:00)</div>
+      <div id="active-staff-summary">Personal en piso hoy: Camila Torres, Mateo Ríos, Luis Navarro (3)</div>
+    </div>
+
+    <!-- VISTA 1: ASISTENTE DE TURNO EN USO -->
+    <main id="view-copiloto" class="view-section active">
+      <div class="card">
+        <div class="stepper">
+          <div id="pill-1" class="step-pill active"><span class="step-num">1</span> Pausa</div>
+          <div id="pill-2" class="step-pill"><span class="step-num">2</span> Prioriza</div>
+          <div id="pill-3" class="step-pill"><span class="step-num">3</span> Coordina</div>
+        </div>
+
+        <!-- PASO 1 -->
+        <section id="step-1" class="step-panel active">
+          <h2 class="section-title">1. Haz una pausa antes de dar instrucciones</h2>
+          <p class="section-desc">Marca la novedad que está ocurriendo en piso y toma 5 segundos para responder con calma.</p>
+
+          <div class="form-group">
+            <label for="situacion-select">Novedad actual en tienda</label>
+            <select id="situacion-select" onchange="updateDynamicViews()">
+              <option value="cajas">Fila en caja (más de 6 clientes esperando)</option>
+              <option value="camion">Llegada de camión de pedido con ausencia de un auxiliar</option>
+              <option value="cliente">Reclamo de cliente en punto de pago por diferencia de precio</option>
+              <option value="conflicto">Desacuerdo entre compañeros por reparto de tareas</option>
+            </select>
+          </div>
+
+          <div class="pause-box">
+            <span class="box-label" style="color: var(--muted);">Pausa breve de control (5 s)</span>
+            <p style="font-size: 13.5px;">Inhala 3 segundos, exhala en 2 segundos y enfócate en resolver la operación sin elevar la voz.</p>
+            <div id="timer-val" class="timer-display">05 s</div>
+            <button id="btn-timer" class="btn btn-secondary" onclick="runPauseTimer()">Iniciar pausa de 5 segundos</button>
+          </div>
+
+          <div class="btn-row">
+            <button id="btn-to-step2" class="btn btn-primary" disabled onclick="goToStep(2)">Continuar a Prioriza</button>
+          </div>
+        </section>
+
+        <!-- PASO 2 -->
+        <section id="step-2" class="step-panel">
+          <h2 class="section-title">2. Reorganiza las tareas según el personal en piso</h2>
+          <p class="section-desc">Verifica quiénes están activos en este momento para asignar las prioridades inmediatas.</p>
+
+          <div class="form-group">
+            <label>Colaboradores activos en el turno</label>
+            <div class="staff-grid">
+              <label class="staff-chip"><input type="checkbox" class="staff-chk" value="Camila Torres" checked onchange="onStaffChange()"> Camila Torres (Caja 1)</label>
+              <label class="staff-chip"><input type="checkbox" class="staff-chk" value="Mateo Ríos" checked onchange="onStaffChange()"> Mateo Ríos (Surtido)</label>
+              <label class="staff-chip"><input type="checkbox" class="staff-chk" value="Luis Navarro" checked onchange="onStaffChange()"> Luis Navarro (Frío / Bodega)</label>
+              <label class="staff-chip"><input type="checkbox" class="staff-chk" value="Sofía Herrera" onchange="onStaffChange()"> Sofía Herrera (Apoyo)</label>
+            </div>
+          </div>
+
+          <div id="priority-output" class="two-col"></div>
+
+          <div class="btn-row">
+            <button class="btn btn-secondary" onclick="goToStep(1)">Atrás</button>
+            <button class="btn btn-primary" onclick="goToStep(3)">Continuar a Coordina</button>
+          </div>
+        </section>
+
+        <!-- PASO 3 -->
+        <section id="step-3" class="step-panel">
+          <h2 class="section-title">3. Comunica la instrucción y cierra acuerdo con el equipo</h2>
+          <p class="section-desc">Usa la pauta directa para asignar tiempos claros y confirmar si alguien tiene algún inconveniente.</p>
+
+          <div id="coordinate-output" class="two-col"></div>
+
+          <div id="log-toast" class="toast-ok">Aplicación del protocolo guardada en la Bitácora del Turno (#0412).</div>
+
+          <div class="btn-row">
+            <button class="btn btn-secondary" onclick="goToStep(2)">Atrás</button>
+            <button class="btn btn-primary" onclick="saveToShiftLog()">Registrar en bitácora del turno</button>
+            <button class="btn btn-secondary" onclick="resetCopiloto()">Nuevo ciclo</button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- VISTA 2: BITÁCORA EN VIVO, ENTRENAMIENTO Y SUPERVISIÓN -->
+    <section id="view-taller" class="view-section">
+      <div class="practice-grid">
+        <!-- Columna izquierda: Bitácora real de tienda / Simulador rápido -->
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+            <div>
+              <h2 class="section-title">Seguimiento en Tienda #0412</h2>
+              <p class="section-desc" style="margin-bottom:0;">Registro semanal de aplicaciones PPC y entrenamiento rápido.</p>
+            </div>
+            <div class="sub-switch">
+              <button id="sub-log-btn" class="sub-btn active" onclick="toggleLeftPanel('log')">Bitácora del turno</button>
+              <button id="sub-sim-btn" class="sub-btn" onclick="toggleLeftPanel('sim')">Entrenamiento (3 casos)</button>
+            </div>
+          </div>
+
+          <!-- Subpanel A: Bitácora ya en uso -->
+          <div id="panel-log">
+            <div id="shift-log-list"></div>
+          </div>
+
+          <!-- Subpanel B: Simulador de 3 casos -->
+          <div id="panel-sim" style="display:none;">
+            <div class="case-selector">
+              <button id="case-btn-0" class="case-pill active" onclick="loadCase(0)">Caso 1: Fila en caja</button>
+              <button id="case-btn-1" class="case-pill" onclick="loadCase(1)">Caso 2: Llegada de camión</button>
+              <button id="case-btn-2" class="case-pill" onclick="loadCase(2)">Caso 3: Discusión en pasillo</button>
+            </div>
+            <div id="sim-container"></div>
+          </div>
+        </div>
+
+        <!-- Columna derecha: Lista de chequeo del supervisor -->
+        <div class="card">
+          <h2 class="section-title">Observación de Liderazgo en Piso</h2>
+          <p class="section-desc">Seguimiento quincenal de aplicación del protocolo en punto de venta.</p>
+
+          <div class="obs-header">
+            <strong>Tienda:</strong> #0412 Alto Prado · <strong>Jefe de tienda:</strong> Carlos Méndez<br/>
+            <strong>Supervisora:</strong> Laura Salgado (Zona Norte Barranquilla)
+          </div>
+
+          <div id="checklist-items"></div>
+
+          <div class="score-summary">
+            <div>
+              <div style="font-size: 12px; color: var(--muted); font-weight: 600;">Puntaje de seguimiento</div>
+              <div id="check-status" style="font-size: 13px; font-weight: 600; color: var(--ink);">En revisión</div>
+            </div>
+            <div id="check-total" class="score-num">18 / 24</div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-secondary" style="width: 100%;" onclick="window.print()">Exportar acta de observación en PDF</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const sitLabels = {
+      cajas: "Fila extensa en caja (+6 clientes)",
+      camion: "Llegada de camión con ausencia de personal",
+      cliente: "Reclamo de cliente por precio en punto de pago",
+      conflicto: "Desacuerdo entre compañeros por reparto de tareas"
+    };
+
+    const ppcData = {
+      cajas: {
+        urgente: [
+          "Abrir caja 2 de inmediato hasta evacuar la fila.",
+          "Agilizar cobro y verificación de precios sin demoras.",
+          "Dar paso prioritario a adultos mayores o clientes con pocos artículos."
+        ],
+        aplazar: [
+          "Surtido de pasillos secos (granos, aceite, aseo).",
+          "Barrido general y organización interna de bodega."
+        ],
+        evitar: "«¿Es que no ven esa fila tan larga? Dejen todo tirado y vengan a cobrar ya porque después nos regañan por las demoras.»"
+      },
+      camion: {
+        urgente: [
+          "Ingresar primero los productos refrigerados y congelados para cuidar la cadena de frío.",
+          "Mantener despejada la zona de paso de clientes.",
+          "Sostener al menos una caja abierta sin interrupción."
+        ],
+        aplazar: [
+          "Acomodo detallado de mercancía seca en góndolas altas.",
+          "Cambio de habladores o etiquetas de promociones."
+        ],
+        evitar: "«Hoy faltó gente y justo llegó el camión; miren cómo hacen pero esa mercancía tiene que quedar guardada ya mismo.»"
+      },
+      cliente: {
+        urgente: [
+          "Atender al cliente a un lado de la caja para no detener la fila.",
+          "Escuchar el reclamo sin interrumpir y revisar el precio en sistema.",
+          "Resolver conforme a la política de tienda con tono sereno."
+        ],
+        aplazar: [
+          "Averiguar en ese momento quién olvidó retirar el cartel anterior.",
+          "Conteo cíclico o tareas administrativas internas."
+        ],
+        evitar: "«¿Quién fue el que dejó ese precio viejo allá atrás? Siempre hacen lo mismo y ahora me toca dar la cara a mí con el cliente.»"
+      },
+      conflicto: {
+        urgente: [
+          "Frenar la discusión con calma para mantener buen ambiente frente a los clientes.",
+          "Equilibrar de inmediato las tareas restantes del turno.",
+          "Conversar 3 minutos en bodega al bajar el flujo para escuchar a ambos."
+        ],
+        aplazar: [
+          "Buscar responsables de turnos anteriores en plena hora pico.",
+          "Actividades secundarias que puedan cerrarse antes de finalizar jornada."
+        ],
+        evitar: "«Dejen de pelear como niños; aquí nadie tiene corona y al que no le guste el ritmo de la tienda que avise de una vez.»"
+      }
+    };
+
+    // Historial precargado como si la app llevara días en uso en Tienda #0412
+    const shiftLogs = [
+      {
+        when: "Hoy · 09:40 a. m.",
+        title: "Llegada de camión con ausencia de personal",
+        detail: "Priorizado cuarto frío en 20 min con Mateo Ríos y Luis Navarro; Camila Torres sostuvo Caja 1.",
+        status: "Resuelto sin novedad",
+        isNew: false
+      },
+      {
+        when: "Ayer · 05:15 p. m.",
+        title: "Fila extensa en caja (+6 clientes)",
+        detail: "Apertura de Caja 2 durante 15 min y pausa temporal de surtido seco; revisión al bajar flujo.",
+        status: "Cerrado en turno",
+        isNew: false
+      },
+      {
+        when: "Martes · 11:20 a. m.",
+        title: "Reclamo de cliente por precio en punto de pago",
+        detail: "Atención directa del jefe a un costado de caja; verificación de etiquetas en pasillo de aseo al cierre.",
+        status: "Cerrado en turno",
+        isNew: false
+      }
+    ];
+
+    function getActiveStaff() {
+      const checked = Array.from(document.querySelectorAll(".staff-chk:checked")).map(c => c.value.split(" ")[0]);
+      if (checked.length === 0) return ["Camila"];
+      return checked;
+    }
+
+    function onStaffChange() {
+      const fullChecked = Array.from(document.querySelectorAll(".staff-chk:checked")).map(c => c.value);
+      const summary = fullChecked.length > 0
+        ? `Personal en piso hoy: ${fullChecked.join(", ")} (${fullChecked.length})`
+        : "Personal en piso hoy: Sin auxiliares seleccionados";
+      document.getElementById("active-staff-summary").textContent = summary;
+      renderPriorityPlan();
+      renderCoordinateScript();
+    }
+
+    function switchTab(tabName, btn) {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".view-section").forEach(v => v.classList.remove("active"));
+      document.getElementById("view-" + tabName).classList.add("active");
+    }
+
+    function toggleLeftPanel(mode) {
+      document.getElementById("sub-log-btn").classList.toggle("active", mode === "log");
+      document.getElementById("sub-sim-btn").classList.toggle("active", mode === "sim");
+      document.getElementById("panel-log").style.display = mode === "log" ? "block" : "none";
+      document.getElementById("panel-sim").style.display = mode === "sim" ? "block" : "none";
+    }
+
+    let timerInterval = null;
+    function runPauseTimer() {
+      if (timerInterval) return;
+      let seconds = 5;
+      const display = document.getElementById("timer-val");
+      const btnTimer = document.getElementById("btn-timer");
+      const btnNext = document.getElementById("btn-to-step2");
+
+      btnTimer.disabled = true;
+      btnTimer.textContent = "Tomando pausa...";
+
+      timerInterval = setInterval(() => {
+        seconds--;
+        display.textContent = "0" + seconds + " s";
+        if (seconds <= 0) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+          display.textContent = "Listo";
+          btnTimer.textContent = "Pausa realizada";
+          btnNext.disabled = false;
+        }
+      }, 1000);
+    }
+
+    function goToStep(stepNum) {
+      for (let i = 1; i <= 3; i++) {
+        const panel = document.getElementById("step-" + i);
+        const pill = document.getElementById("pill-" + i);
+        panel.classList.remove("active");
+        pill.classList.remove("active", "done");
+
+        if (i < stepNum) pill.classList.add("done");
+        if (i === stepNum) {
+          pill.classList.add("active");
+          panel.classList.add("active");
+        }
+      }
+      document.getElementById("log-toast").style.display = "none";
+      if (stepNum === 2) renderPriorityPlan();
+      if (stepNum === 3) renderCoordinateScript();
+    }
+
+    function buildAssignmentText(staff) {
+      if (staff.length === 1) {
+        return `${staff[0]} sostiene la caja principal mientras tú cubres la prioridad inmediata.`;
+      }
+      if (staff.length === 2) {
+        return `${staff[0]} sostiene caja principal y ${staff[1]} apoya contigo la prioridad inmediata.`;
+      }
+      if (staff.length === 3) {
+        return `${staff[0]} y ${staff[1]} atienden lo urgente, mientras ${staff[2]} sostiene el frente de caja.`;
+      }
+      return `${staff[0]} y ${staff[1]} resuelven la prioridad inmediata, ${staff[2]} sostiene caja principal y ${staff[3]} mantiene pasillos despejados.`;
+    }
+
+    function buildAssertiveScript(sit, staff) {
+      const p1 = staff[0] || "Camila";
+      const p2 = staff[1] || "Mateo";
+      const p3 = staff[2] || "Luis";
+
+      if (sit === "cajas") {
+        return `«Equipo, tenemos fila en caja. ${p1}, apóyame en Caja 2 durante 15 minutos; ${p2}, ayuda con empaque y verificación de precios${staff.length >= 3 ? `; ${p3}, sostén el frente de tienda` : ""}. Pausamos surtido seco un momento y en 15 minutos revisamos. ¿Alguno tiene inconveniente con este orden?»`;
+      }
+      if (sit === "camion") {
+        return `«Muchachos, llegó el pedido. Vamos a meter primero lo refrigerado en 20 minutos entre ${p2} y yo, mientras ${p1} sostiene la caja${staff.length >= 3 ? ` y ${p3} despeja el acceso` : ""}. Apenas guardemos el frío rotamos. ¿Están de acuerdo?»`;
+      }
+      if (sit === "cliente") {
+        return `«Yo atiendo al cliente a un costado para liberar la fila. ${p1}, sigue cobrando por favor${staff.length >= 2 ? `, y en 5 minutos revisamos con ${p2} las etiquetas del pasillo` : ""}. ¿Todo claro?»`;
+      }
+      return `«Paremos un momento aquí. Para equilibrar el turno, ${p1} toma caja los próximos 40 minutos y ${p2} cubre surtido y frío; luego cambiamos. Al bajar el flujo conversamos 3 minutos en bodega para escucharlos.»`;
+    }
+
+    function renderPriorityPlan() {
+      const sit = document.getElementById("situacion-select").value;
+      const staff = getActiveStaff();
+      const data = ppcData[sit];
+
+      const urgItems = data.urgente.map(item => `<li>${item}</li>`).join("");
+      const defItems = data.aplazar.map(item => `<li>${item}</li>`).join("");
+
+      document.getElementById("priority-output").innerHTML = `
+        <div class="info-box urgent">
+          <span class="box-label">Hacer ya mismo (Prioridad 1)</span>
+          <ul>${urgItems}</ul>
+          <p style="font-size:12.5px; color:var(--muted); margin-top:10px;"><strong>Distribución del equipo:</strong> ${buildAssignmentText(staff)}</p>
+        </div>
+        <div class="info-box defer">
+          <span class="box-label">Dejar para después (Aplazar 20 min)</span>
+          <ul>${defItems}</ul>
+        </div>
+      `;
+    }
+
+    function renderCoordinateScript() {
+      const sit = document.getElementById("situacion-select").value;
+      const staff = getActiveStaff();
+      const data = ppcData[sit];
+
+      document.getElementById("coordinate-output").innerHTML = `
+        <div class="info-box avoid">
+          <span class="box-label">Evitar (Respuesta reactiva)</span>
+          <p class="script-quote">${data.evitar}</p>
+        </div>
+        <div class="info-box assertive">
+          <span class="box-label">Pauta de comunicación en piso</span>
+          <p class="script-quote">${buildAssertiveScript(sit, staff)}</p>
+        </div>
+      `;
+    }
+
+    function updateDynamicViews() {
+      renderPriorityPlan();
+      renderCoordinateScript();
+    }
+
+    function saveToShiftLog() {
+      const sit = document.getElementById("situacion-select").value;
+      const staff = getActiveStaff();
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
+
+      shiftLogs.unshift({
+        when: `Hoy · ${hh}:${mm}`,
+        title: sitLabels[sit],
+        detail: `Aplicado Protocolo PPC con equipo activo (${staff.join(", ")}). Revisión programada a 15–20 min.`,
+        status: "Recién registrado",
+        isNew: true
+      });
+
+      renderShiftLogs();
+      document.getElementById("log-toast").style.display = "block";
+    }
+
+    function renderShiftLogs() {
+      const host = document.getElementById("shift-log-list");
+      host.innerHTML = shiftLogs
+        .map(item => `
+          <div class="log-item ${item.isNew ? "new-entry" : ""}">
+            <div class="log-top">
+              <span>${item.when} · Jefe: Carlos Méndez</span>
+              <span class="badge-state">${item.status}</span>
+            </div>
+            <div style="font-size:13.5px; font-weight:700; margin-bottom:3px;">${item.title}</div>
+            <div style="font-size:13px; color:var(--muted);">${item.detail}</div>
+          </div>
+        `)
+        .join("");
+    }
+
+    function resetCopiloto() {
+      document.getElementById("timer-val").textContent = "05 s";
+      const btnTimer = document.getElementById("btn-timer");
+      btnTimer.disabled = false;
+      btnTimer.textContent = "Iniciar pausa de 5 segundos";
+      document.getElementById("btn-to-step2").disabled = true;
+      document.getElementById("log-toast").style.display = "none";
+      goToStep(1);
+    }
+
+    // Entrenamiento de 3 casos
+    const cases = [
+      {
+        title: "Caso 1: Fila de 8 clientes en caja y faltó un auxiliar",
+        context: "Sábado 11:30 a. m. Hay 8 clientes esperando en caja, un compañero reportó incapacidad y el surtido de granos quedó a medio hacer.",
+        steps: [
+          {
+            stage: "Paso 1 — Pausa",
+            options: [
+              { text: "Gritar desde la caja para que dejen el surtido inmediatamente.", pts: 10, msg: "Al elevar la voz frente a clientes aumenta la tensión del equipo y el riesgo de error al cobrar." },
+              { text: "Respirar 5 segundos, bajar el tono y revisar con quién cuentas en piso.", pts: 35, msg: "Correcto: mantener la calma evita trasladar el estrés al turno." }
+            ]
+          },
+          {
+            stage: "Paso 2 — Prioriza",
+            options: [
+              { text: "Abrir Caja 2 y dejar quieto el surtido seco durante 20 minutos.", pts: 35, msg: "Correcto: lo urgente es evacuar la fila; el surtido puede esperar." },
+              { text: "Pedir al cajero que cobre más rápido mientras el otro sigue surtiendo.", pts: 10, msg: "Mantiene el cuello de botella y sobrecarga a una sola persona." }
+            ]
+          },
+          {
+            stage: "Paso 3 — Coordina",
+            options: [
+              { text: "Pedir apoyo en Caja 2 por 20 minutos, fijar revisión y preguntar si hay dificultad.", pts: 30, msg: "Muy bien: instrucción clara, con tiempo definido y escucha activa." },
+              { text: "Mandar al compañero a caja sin aclarar tiempo ni qué pasa con el pasillo.", pts: 15, msg: "Falta precisar tiempos para evitar desorden operativo." }
+            ]
+          }
+        ]
+      },
+      {
+        title: "Caso 2: Llegó camión con refrigerados en hora de almuerzo",
+        context: "Llega el camión con lácteos y carnes frías mientras un auxiliar está en su hora de almuerzo y hay movimiento normal en tienda.",
+        steps: [
+          {
+            stage: "Paso 1 — Pausa",
+            options: [
+              { text: "Llamar molesto al compañero que está almorzando para que salga a ayudar.", pts: 5, msg: "Interrumpir el descanso genera malestar y deteriora la confianza del equipo." },
+              { text: "Mantener la calma y organizar el descargue solo con quienes están activos.", pts: 35, msg: "Correcto: respeta los turnos y resuelve con el personal disponible." }
+            ]
+          },
+          {
+            stage: "Paso 2 — Prioriza",
+            options: [
+              { text: "Guardar primero lo refrigerado y dejar la mercancía seca en área segura.", pts: 35, msg: "Exacto: protege la cadena de frío sin saturar al equipo." },
+              { text: "Intentar ingresar y surtir todo el pedido de una vez entre dos personas.", pts: 10, msg: "Descuida la caja y agota innecesariamente al personal." }
+            ]
+          },
+          {
+            stage: "Paso 3 — Coordina",
+            options: [
+              { text: "Acordar 15 minutos en cuarto frío y avisar que al volver el relevo rotan.", pts: 30, msg: "Excelente: coordinación clara y esfuerzo compartido." },
+              { text: "Descargar todo solo sin avisar cómo queda cubierta la tienda.", pts: 15, msg: "Deja la tienda sin coordinación y sobrecarga al jefe." }
+            ]
+          }
+        ]
+      },
+      {
+        title: "Caso 3: Discusión entre compañeros por reparto de tareas",
+        context: "Dos auxiliares discuten en el pasillo porque uno siente que siempre le toca limpiar y surtir mientras el otro permanece en caja.",
+        steps: [
+          {
+            stage: "Paso 1 — Pausa",
+            options: [
+              { text: "Acercarte con tono tranquilo para frenar la discusión delante de clientes.", pts: 35, msg: "Bien hecho: detienes el conflicto a tiempo sin exponer a nadie." },
+              { text: "Regañarlos en voz alta en el pasillo para que se callen.", pts: 5, msg: "Regañar en público empeora el clima y genera resentimiento." }
+            ]
+          },
+          {
+            stage: "Paso 2 — Prioriza",
+            options: [
+              { text: "Reorganizar las tareas del turno de forma pareja y dejar la charla al cierre.", pts: 35, msg: "Correcto: equilibra el trabajo inmediato y reserva espacio privado para hablar." },
+              { text: "Ignorar el roce esperando que se les pase solo.", pts: 10, msg: "El desacuerdo no resuelto afecta la cooperación de toda la semana." }
+            ]
+          },
+          {
+            stage: "Paso 3 — Coordina",
+            options: [
+              { text: "Definir rotación por bloques de 40 minutos y escuchar a ambos 3 minutos al cierre.", pts: 30, msg: "Muy bien: combina equidad operativa con escucha empática." },
+              { text: "Cambiarlos de puesto sin explicar el criterio ni escuchar qué les molestaba.", pts: 15, msg: "Sin escuchar sus puntos, el conflicto vuelve a presentarse." }
+            ]
+          }
+        ]
+      }
+    ];
+
+    let currentCase = 0;
+    let currentStep = 0;
+    let totalSimScore = 0;
+    let lastFeedback = "";
+
+    function loadCase(idx) {
+      currentCase = idx;
+      currentStep = 0;
+      totalSimScore = 0;
+      lastFeedback = "";
+      document.querySelectorAll(".case-pill").forEach((p, i) => {
+        p.classList.toggle("active", i === idx);
+      });
+      renderSim();
+    }
+
+    function chooseOption(optIdx) {
+      const stepObj = cases[currentCase].steps[currentStep];
+      const chosen = stepObj.options[optIdx];
+      totalSimScore += chosen.pts;
+      lastFeedback = chosen.msg;
+      currentStep++;
+      renderSim();
+    }
+
+    function renderSim() {
+      const c = cases[currentCase];
+      const container = document.getElementById("sim-container");
+
+      if (currentStep < c.steps.length) {
+        const s = c.steps[currentStep];
+        const optsHtml = s.options
+          .map((o, i) => `<button class="option-btn" onclick="chooseOption(${i})">${o.text}</button>`)
+          .join("");
+        const fbHtml = lastFeedback ? `<div class="feedback-banner"><strong>Observación:</strong> ${lastFeedback}</div>` : "";
+
+        container.innerHTML = `
+          <div class="scenario-context">
+            <strong>${c.title}</strong><br/>
+            <span style="color: var(--muted);">${c.context}</span>
+          </div>
+          <div style="font-size:13px; font-weight:700; color:var(--primary); margin-bottom:10px;">${s.stage}</div>
+          ${optsHtml}
+          ${fbHtml}
+        `;
+      } else {
+        const level = totalSimScore >= 85
+          ? "Manejo sólido del turno: autorregulación, priorización y coordinación clara."
+          : totalSimScore >= 65
+          ? "Manejo adecuado, con oportunidad de precisar mejor los tiempos."
+          : "Conviene repetir el caso enfocándose en pausar antes de responder.";
+        container.innerHTML = `
+          <div class="scenario-context">
+            <strong>Resultado: ${totalSimScore} / 100</strong><br/>
+            <span style="color: var(--ok); font-weight:600;">${level}</span>
+            <p style="margin-top:8px; color:var(--muted);">${lastFeedback}</p>
+          </div>
+          <button class="btn btn-primary" onclick="loadCase(${currentCase})">Repetir caso</button>
+        `;
+      }
+    }
+
+    // Lista de chequeo de observación en piso
+    const criteriaList = [
+      "1. Hace una pausa antes de dar órdenes en momentos de presión.",
+      "2. Habla con respeto, sin gritos ni regaños frente a clientes.",
+      "3. Identifica qué es urgente en la tienda y qué puede esperar.",
+      "4. Reparte el trabajo de forma pareja entre los compañeros.",
+      "5. Define en cuánto tiempo revisarán el avance de la tarea.",
+      "6. Confirma si algún colaborador tiene inconvenientes operativos."
+    ];
+
+    function initChecklist() {
+      const host = document.getElementById("checklist-items");
+      host.innerHTML = criteriaList
+        .map((label, idx) => `
+          <div class="check-row">
+            <span>${label}</span>
+            <select id="chk-${idx}" onchange="calcChecklist()">
+              <option value="4">4 - Siempre</option>
+              <option value="3" selected>3 - Casi siempre</option>
+              <option value="2">2 - A veces</option>
+              <option value="1">1 - Nunca</option>
+            </select>
+          </div>
+        `)
+        .join("");
+      calcChecklist();
+    }
+
+    function calcChecklist() {
+      let sum = 0;
+      for (let i = 0; i < criteriaList.length; i++) {
+        sum += parseInt(document.getElementById("chk-" + i).value, 10);
+      }
+      document.getElementById("check-total").textContent = sum + " / 24";
+      const statusEl = document.getElementById("check-status");
+      if (sum >= 20) {
+        statusEl.textContent = "Desempeño consolidado en piso";
+        statusEl.style.color = "var(--ok)";
+      } else if (sum >= 14) {
+        statusEl.textContent = "En seguimiento quincenal";
+        statusEl.style.color = "var(--warn)";
+      } else {
+        statusEl.textContent = "Requiere acompañamiento en tienda";
+        statusEl.style.color = "var(--primary)";
+      }
+    }
+
+    renderShiftLogs();
+    loadCase(0);
+    initChecklist();
+  </script>
+</body>
+</html>
